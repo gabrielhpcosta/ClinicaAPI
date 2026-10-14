@@ -110,7 +110,7 @@ O arquivo `.env` não deve ser commitado no repositório.
 Clone o repositório:
 
 ```bash
-git clone https://github.com/gbriel019/ClinicaAPI.git
+git clone https://github.com/gabrielhpcosta/ClinicaAPI.git
 ```
 
 Acesse a pasta do projeto:
@@ -170,5 +170,7 @@ A aplicação está organizada seguindo uma arquitetura baseada em camadas, sepa
 
 ## Autor
 
-**Gabriel Pinheiro**
+**Gabriel Henrique Costa**
+
+[LinkedIn](https://www.linkedin.com/in/gabrielhpcosta) · [GitHub](https://github.com/gabrielhpcosta)
 
