@@ -1,6 +1,6 @@
 package com.clinica.api.services;
 
-import java.time.DayOfWeek;
+import java.time.*;
 
 import com.clinica.api.config.mappers.ConsultaMapper;
 import com.clinica.api.dto.response.DisponibilidadeResponse;
@@ -23,9 +23,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,13 +34,15 @@ public class ConsultaService {
     private final PacienteRepository pacienteRepository;
     private final ConsultaMapper consultaMapper;
     private final FeriadoService feriadoService;
+    private final Clock clock;
 
-    public ConsultaService(ConsultaRepository consultaRepository, MedicoRepository medicoRepository, PacienteRepository pacienteRepository, ConsultaMapper consultaMapper, FeriadoService feriadoService) {
+    public ConsultaService(ConsultaRepository consultaRepository, MedicoRepository medicoRepository, PacienteRepository pacienteRepository, ConsultaMapper consultaMapper, FeriadoService feriadoService, Clock clock) {
         this.consultaRepository = consultaRepository;
         this.medicoRepository = medicoRepository;
         this.pacienteRepository = pacienteRepository;
         this.consultaMapper = consultaMapper;
         this.feriadoService = feriadoService;
+        this.clock = clock;
     }
 
     private static final Logger log = LoggerFactory.getLogger(ConsultaService.class);
@@ -120,7 +119,7 @@ public class ConsultaService {
             throw new BadRequestException(("Não é possivel agendar uma consulta com o paciente inativo"));
         }
 
-        if (request.getDataHora().isBefore(LocalDateTime.now())) {
+        if (request.getDataHora().isBefore(LocalDateTime.now(clock))) {
             throw new BadRequestException("Não é possível agendar uma consulta em uma data/horário no passado");
         }
 
@@ -172,7 +171,7 @@ public class ConsultaService {
             throw new BadRequestException("A consulta já está cancelada");
         }
 
-        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime agora = LocalDateTime.now(clock);
         long horas = Duration.between(agora, consulta.getDataHora()).toHours();
 
         if (horas < 24) {
