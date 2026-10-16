@@ -1,6 +1,7 @@
 package com.clinica.api.services;
 
 import com.clinica.api.config.mappers.ConsultaMapper;
+import com.clinica.api.dto.request.CancelarConsultaRequest;
 import com.clinica.api.dto.request.ConsultaRequest;
 import com.clinica.api.entities.Consulta;
 import com.clinica.api.entities.Medico;
@@ -226,6 +227,69 @@ public class ConsultaServiceTest {
         assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("neste dia");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    private Consulta consulta(LocalDateTime dataHora, StatusConsulta status) {
+        Consulta c = new Consulta();
+        c.setId(10L);
+        c.setDataHora(dataHora);
+        c.setStatus(status);
+        return c;
+    }
+
+    private CancelarConsultaRequest cancelamento(String motivo) {
+        CancelarConsultaRequest r = new CancelarConsultaRequest();
+        r.setMotivo(motivo);
+        return r;
+    }
+
+    @Test
+    void cancelar_deveCancelarConsulta_quandoFaltaMaisDe24Horas() {
+        Consulta consulta = consulta(DATA_VALIDA, StatusConsulta.AGENDADA);
+        when(consultaRepository.findById(10L)).thenReturn(Optional.of(consulta));
+        when(consultaRepository.save(any(Consulta.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.cancelar(10L, cancelamento("Paciente viajou"));
+
+        assertThat(consulta.getStatus()).isEqualTo(StatusConsulta.CANCELADA);
+        assertThat(consulta.getMotivoCancelamento()).isEqualTo("Paciente viajou");
+        verify(consultaRepository).save(consulta);
+    }
+
+    @Test
+    void cancelar_deveLancarErro_quandoFaltaMenosDe24Horas() {
+        LocalDateTime amanhaCedo = LocalDateTime.of(2026,10,15,8,0);
+        Consulta consulta = consulta(amanhaCedo, StatusConsulta.AGENDADA);
+        when(consultaRepository.findById(10L)).thenReturn(Optional.of(consulta));
+
+        assertThatThrownBy(() -> service.cancelar(10L, cancelamento("Imprevisto")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("24 horas");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelar_deveLancarErro_quandoConsultaJaCancelada() {
+        Consulta consulta = consulta(DATA_VALIDA, StatusConsulta.CANCELADA);
+        when(consultaRepository.findById(10L)).thenReturn(Optional.of(consulta));
+
+        assertThatThrownBy(() -> service.cancelar(10L, cancelamento("Imprevisto")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("já está cancelada");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void cancelar_deveLancarErro_quandoConsultaNaoEncontrada() {
+        when(consultaRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.cancelar(10L, cancelamento("Imprevisto")))
+                .isInstanceOf(NotFound.class)
+                .hasMessageContaining("Consulta não encontrada");
 
         verify(consultaRepository, never()).save(any());
     }
