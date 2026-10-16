@@ -7,6 +7,7 @@ import com.clinica.api.entities.Medico;
 import com.clinica.api.entities.Paciente;
 import com.clinica.api.enums.StatusConsulta;
 import com.clinica.api.exception.BadRequestException;
+import com.clinica.api.exception.ConflictException;
 import com.clinica.api.exception.NotFound;
 import com.clinica.api.repositories.ConsultaRepository;
 import com.clinica.api.repositories.MedicoRepository;
@@ -190,6 +191,41 @@ public class ConsultaServiceTest {
         assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
                 .isInstanceOf(NotFound.class)
                 .hasMessageContaining("Paciente não encontrado");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoMedicoJaTemConsultaNoHorario() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(true)));
+        when(feriadoService.ehFeriado(any())).thenReturn(false);
+        when(consultaRepository.existsByMedicoAndStatusAndDataHoraBetween(any(), any(), any(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("neste horário");
+
+        verify(consultaRepository).existsByMedicoAndStatusAndDataHoraBetween(
+                any(Medico.class),
+                eq(StatusConsulta.AGENDADA),
+                eq(DATA_VALIDA.minusMinutes(30).plusNanos(1)),
+                eq(DATA_VALIDA.plusMinutes(30).minusNanos(1))
+        );
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoPacienteJaTemConsultaNoMesmoDia() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(true)));
+        when(feriadoService.ehFeriado(any())).thenReturn(false);
+        when(consultaRepository.existsByPacienteAndStatusAndDataHoraBetween(any(), any(), any(), any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("neste dia");
 
         verify(consultaRepository, never()).save(any());
     }
