@@ -7,6 +7,7 @@ import com.clinica.api.entities.Medico;
 import com.clinica.api.entities.Paciente;
 import com.clinica.api.enums.StatusConsulta;
 import com.clinica.api.exception.BadRequestException;
+import com.clinica.api.exception.NotFound;
 import com.clinica.api.repositories.ConsultaRepository;
 import com.clinica.api.repositories.MedicoRepository;
 import com.clinica.api.repositories.PacienteRepository;
@@ -166,6 +167,29 @@ public class ConsultaServiceTest {
         assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("feriado");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoMedicoNaoEncontrado() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
+                .isInstanceOf(NotFound.class)
+                .hasMessageContaining("Médico não encontrado");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoPacienteNaoEncontrado() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
+                .isInstanceOf(NotFound.class)
+                .hasMessageContaining("Paciente não encontrado");
 
         verify(consultaRepository, never()).save(any());
     }
