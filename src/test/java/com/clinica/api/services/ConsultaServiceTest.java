@@ -102,4 +102,71 @@ public class ConsultaServiceTest {
 
         verify(consultaRepository, never()).save(any());
     }
+
+    @Test
+    void salvar_deveLancarErro_quandoPacienteInativo() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(false)));
+
+        assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("paciente inativo");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoDataNoPassado() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(true)));
+
+        LocalDateTime ontem = LocalDateTime.of(2026,5,10,10,0);
+
+        assertThatThrownBy(() -> service.salvar(request(ontem)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("no passado");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoHorarioForaDoExpediente() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(true)));
+
+        LocalDateTime fechado = LocalDateTime.of(2026,10,21,5,0);
+
+        assertThatThrownBy(() -> service.salvar(request(fechado)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Horário indisponivel");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoDiaForFimDeSemana() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(true)));
+
+        LocalDateTime fimDeSemana = LocalDateTime.of(2026,10,24,10,0);
+
+        assertThatThrownBy(() -> service.salvar(request(fimDeSemana)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Dia indisponivel");
+
+        verify(consultaRepository, never()).save(any());
+    }
+
+    @Test
+    void salvar_deveLancarErro_quandoDiaForFeriado() {
+        when(medicoRepository.findById(1L)).thenReturn(Optional.of(medico(true)));
+        when(pacienteRepository.findById(2L)).thenReturn(Optional.of(paciente(true)));
+        when(feriadoService.ehFeriado(any())).thenReturn(true);
+
+        assertThatThrownBy(() -> service.salvar(request(DATA_VALIDA)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("feriado");
+
+        verify(consultaRepository, never()).save(any());
+    }
 }
