@@ -132,7 +132,7 @@ Execute a aplicação utilizando o Maven Wrapper:
 Após iniciar, a API estará disponível em:
 
 ```text
-http://localhost:8080
+http://localhost:8081
 ```
 
 ## Swagger
@@ -140,7 +140,7 @@ http://localhost:8080
 A documentação interativa da API pode ser acessada através do Swagger:
 
 ```text
-http://localhost:8080/swagger-ui/index.html
+http://localhost:8081/swagger-ui/index.html
 ```
 
 Através do Swagger é possível visualizar e testar os endpoints da aplicação.
